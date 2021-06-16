@@ -21,7 +21,7 @@
 
 // Definición de variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-float EMA_ALFA = 0.1;   //Menor valor, mayor atenuación ( debe estar entre 0 y 1 por estabilidad)
+float EMA_ALFA = 0.1;   // Menor valor, mayor atenuación ( debe estar entre 0 y 1 por estabilidad)
 float EMA_LP = 0;       // Valor inicial
 float medida;
 
@@ -40,8 +40,11 @@ void setup() {
 void loop() {
 Canal(0);           // llamamos al primer sensor ubicado en la parte x de la moto
 Acelerometro();     // Lectura de las aceleraciones
-delay(1000);        
-
+delay(1000);        // Esperamos 1 segundo para la siguiente medida     
+Canal(1);
+Serial.println("Canal1");
+Acelerometro();
+delay(1000);        // Esperamos 1 segundo para la siguiente acción
 }
 
 
