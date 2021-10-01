@@ -31,4 +31,7 @@ Para medir dichas variables se hace uso de la siguiente lista de dispositivos:
 - Módulo sensor de Efecto Hall 3144 5v
     Medición de velocidad
     
+- Módulo de distancia Adafruit VL53L0X
+    Usado para medir la distancia de desplazamiento de los amortiguadores
     
+
