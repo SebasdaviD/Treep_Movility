@@ -1,0 +1,36 @@
+Correciones PCB
+
+%%%%%%%%%%%%%%%%%%%%%%%% 26 de Agosto de 2021  %%%%%%%%%%%%%%%%%%%%%%%%
+
+Hacer el puenteo de los 5 v en ambas caras
+
+Alternar conectores en multiplexor en lado derecho (quedaron alrevez) con acelerometros
+y puentiar sda y scl 
+Los 3v3 de los acelerometros no atravesar si no hacer la conexión con un cable
+
+
+
+no atravesar la energía por un punto de testeo 
+
+Tierra de sensores de velocidad no hay que Puentiarlos
+
+
+//// Próximo diseño
+
+El 5v puede pasar por debajo del GPS (no hay necesidad de pasar entre capas)
+Poner puntos de prueba al lado de lo que quiero cruzar de lado y sobre la pista en sí 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%  31 de agosto de 2021
+
+- Agregar huellas y conexiones de módulo SD
+
+- Agregar las conexiones para un pulsador qur sirva para interactuar con la máquina 
+
+- Agregar conexiones para sensores de temperatura (2)
+
+%%%%%%%%%%%%%%%%%%%%%%%%  9 de Septiembre de 2021
+
+- Agregar conexiones USB-UART (GND,VCC, RX2,TX2,TX1,RX1) para BMS y Controlador del motor
+
+- 

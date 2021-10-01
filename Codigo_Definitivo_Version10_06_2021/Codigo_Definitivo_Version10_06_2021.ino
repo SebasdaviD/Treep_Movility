@@ -4,52 +4,57 @@
  * Placa de desarrollo: Widora Air Versión 6.0  
  */
 
-// Librerías %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Librerías %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-#include <Wire.h>       // Librería para hacer comunicaciones I2C con distintos dispositivos
-#include <MPU9255.h>    // Librería para el uso de magnetómetro, giroscopio y magnetómetro
+#include <Wire.h>             // Librería para hacer comunicaciones I2C con distintos dispositivos
+#include <MPU9255.h>          // Librería para el uso de magnetómetro, giroscopio y magnetómetro
+#include "Adafruit_VL53L0X.h" // Libreria para hacer uso del sensor laser para medir distancias
 
-
-
-// Definición de pines de Entrada-Salida %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Definición de pines de Entrada-Salida %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #define I2C_SDA 21    // Pin de comunicación I2C de datos
 #define I2C_SCL 22    // Pin de comunicación I2C de Reloj
 
 
-// Definición de variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Definición de variables globales %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 float EMA_ALFA = 0.1;   // Menor valor, mayor atenuación ( debe estar entre 0 y 1 por estabilidad)
 float EMA_LP = 0;       // Valor inicial
 float medida;
 
-// Definicíon de objetos y clases %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Definicíon de objetos y clases %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-MPU9255 mpu;    // Objeto mpu proveniente de la librería MPU9255
-
-// 
+MPU9255 mpu;                                // Objeto mpu proveniente de la librería MPU9255
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();  // Objeto de sensor Laser de libreria Adafruit_VL53L0X.h
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 void setup() {
   Serial.begin(115200);           // Inicio de comuniación serial con el puerto COM
   Wire.begin(I2C_SDA, I2C_SCL);   // Definición de los pines I2C de la placa de desarrollo
+  if (!lox.begin()) {
+  Serial.println(F("Error al iniciar VL53L0X"));
+  }
 }
 
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 void loop() {
-Canal(0);           // llamamos al primer sensor ubicado en la parte x de la moto
-Acelerometro();     // Lectura de las aceleraciones
-delay(1000);        // Esperamos 1 segundo para la siguiente medida     
-Canal(1);
-Serial.println("Canal1");
-Acelerometro();
-delay(1000);        // Esperamos 1 segundo para la siguiente acción
+//Canal(2);           // llamamos al primer sensor ubicado en la parte x de la moto
+//Acelerometro();     // Lectura de las aceleraciones
+//delay(100);        // Esperamos 1 segundo para la siguiente medida     
+// Canal(1);
+// Serial.println("Canal1");
+// Acelerometro();
+// delay(100);        // Esperamos 1 segundo para la siguiente acción
+Laser();
+delay(200);
 }
 
 
 
-// Funciones adicionales llamadas en la la parte posterior %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Funciones adicionales llamadas en la la parte posterior %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 //Función para verificar correcto funcionamiento de los sensores MPU9255
@@ -77,6 +82,8 @@ void Canal(uint8_t bus) // Se deben introducir del 0 al 7
   Wire.endTransmission();        // Termina la transmisión
 }
 
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Acelerometro%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 // Función para tomar datos del acelerómetro (Requiere librería MPU9255)
 
@@ -117,6 +124,27 @@ void Magnetometro(){
   Serial.println(mpu.mz);     // Valor del magnetómetro en eje Z (Adicionalmente cambia de linea)
 }
 
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sensor Laser %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+void Laser(){
+  VL53L0X_RangingMeasurementData_t measure;
+  lox.rangingTest(&measure, false); // si se pasa true como parametro, muestra por puerto serie datos de debug
+  if (measure.RangeStatus != 21)
+    {
+     Serial.print("Distancia (mm): ");
+     Serial.println(measure.RangeMilliMeter);
+    } 
+  else
+    {
+      Serial.println("  Fuera de rango ");
+    } 
+  }
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+// Función para medir la distancia mediante el sensor laser 
 /* Filtro pasa bajas para eliminar componentes de alta frecuencia 
  *  Se puede mejorar dandole dos argumentos de entrada, los cuales serían
  *  EMA_ALFA y así se tendría un filtrado con diferente magnitud para cada variable
