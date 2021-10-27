@@ -31,6 +31,22 @@ float EMA_ALFA = 0.1;   // Menor valor, mayor atenuación ( debe estar entre 0 y
 float EMA_LP = 0;       // Valor inicial
 float medida;
 
+// Variables del sensor de velocidad 1 (Se deben cambiar varios aspectos como el radio del iman, radio del iman radio de la rueda etc
+volatile float tiempo0_at = 0;  // Tiempo 0 de rueda de atras
+volatile float tiempo1_at = 0;  // TIempo 1 de rueda de atras de la moto
+
+int RPM_at = 0;
+float VEL_at = 0.00;
+float VELMAX_at = 0.00;
+float omega_at = 0;
+const float pi = 3.14159;
+const float dosPi = 6.28318;
+const float radioIman = 0.12;    //En principio no hace falta para calcular la velocidad angular
+const float radioRueda = 0.14;   //hace falta para calcular la velocidad lineal del coche
+const int hallPin_at = 34;
+
+//
+
 // Definicíon de objetos y clases %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MPU9255 mpu;                                // Objeto mpu proveniente de la librería MPU9255
@@ -42,7 +58,10 @@ void setup() {
   Wire.begin(I2C_SDA, I2C_SCL);   // Definición de los pines I2C de la placa de desarrollo
   if (!lox.begin()) {
   Serial.println(F("Error al iniciar VL53L0X"));
+  pinMode(hallPin_at, INPUT);                                         // Declaracion de pin de sensor Hall
+  attachInterrupt(digitalPinToInterrupt(34), pulsoRueda_at, FALLING); // Interrupcion (pin, funcion a llamar, condicion)
   Sd_init();
+  
   }
 }
 
@@ -51,13 +70,36 @@ void setup() {
 void loop() {
 //Canal(2);           // llamamos al primer sensor ubicado en la parte x de la moto
 //Acelerometro();     // Lectura de las aceleraciones
-datalog();
-delay(90000);
+//datalog();
+velocidad_at();
+}
+
+
+// Funciones adicionales llamadas en la la parte posterior %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sensores de velocidad %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+void pulsoRueda_at()
+{  
+  tiempo1_at = micros();
+  omega_at = (dosPi*1000000 / (tiempo1_at - tiempo0_at)); //Omega en radianes/segundo
+  RPM_at = ((omega_at * 60) / dosPi);
+  VEL_at = omega_at * radioRueda *3.6;   //Velocidad en Km/hora
+  tiempo0_at = tiempo1_at;
+}
+
+void velocidad_at()
+{
+  Serial.print("RPM_at:     ");
+  Serial.println(RPM_at);
+  Serial.print("Velocidad_at:    ");
+  Serial.println(VEL_at); 
 }
 
 
 
-// Funciones adicionales llamadas en la la parte posterior %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 //Función para verificar correcto funcionamiento de los sensores MPU9255
@@ -90,7 +132,8 @@ void Canal(uint8_t bus) // Se deben introducir del 0 al 7
 
 // Función para tomar datos del acelerómetro (Requiere librería MPU9255)
 
-void Acelerometro() {
+void Acelerometro() 
+{
   mpu.read_acc();             // Obtener los datos del acelerometro
   Serial.print("AX: ");       // Imprime en el monitor título de aceleración
   Serial.print((mpu.ax));   // Valor númerico de la aceleración en eje x
@@ -104,7 +147,8 @@ void Acelerometro() {
 
 // Función para tomar datos del Giroscopio (Requiere librería MPU9255)
 
-void Giroscopio() {
+void Giroscopio() 
+{
   mpu.read_gyro();            // Obtener los datos del giroscopio 
   Serial.print("    GX: ");   // Pone un título en puerto serial
   Serial.print(mpu.gx);       // Valor númerico de giro en eje x
@@ -117,7 +161,8 @@ void Giroscopio() {
 
 // Función para tomar datos del Magnetómetro (Requiere librería MPU9255)
 
-void Magnetometro(){
+void Magnetometro()
+{
   mpu.read_mag();             //Obtener los datos del magnetometro
   Serial.print("    MX: ");   // Pone un título en puerto serial
   Serial.print(mpu.mx);
@@ -131,7 +176,8 @@ void Magnetometro(){
 
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sensor Laser %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-void Laser(){
+void Laser()
+{
   VL53L0X_RangingMeasurementData_t measure;
   lox.rangingTest(&measure, false); // si se pasa true como parametro, muestra por puerto serie datos de debug
   if (measure.RangeStatus != 21)
@@ -143,18 +189,18 @@ void Laser(){
     {
       Serial.println("  Fuera de rango ");
     } 
-  }
+}
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Escritura SD%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-void datalog(){
+void datalog()
+{
   writeFile(SD, "/datta.txt", "Hello ");      // Escribe en la´primera linea del archivo hello.txt
   appendFile(SD, "/datta.txt", "World!\n");   // Escribe en la siguiente linea de hello.txt (se debe
-                                              // repetir para cada dato que se ponga en la SD)
-                                              
+                                              // repetir para cada dato que se ponga en la SD)                                             
 }
         
 
@@ -165,26 +211,38 @@ void datalog(){
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Inicializacion modulo SD%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-void Sd_init(){
-  if(!SD.begin(csPin)){
+void Sd_init()
+{
+  if(!SD.begin(csPin))
+  {
     Serial.println("Card Mount Failed");
     return;
   }
   uint8_t cardType = SD.cardType();
-
-  if(cardType == CARD_NONE){
+  if(cardType == CARD_NONE)
+  {
     Serial.println("No SD card attached");
     return;
   }
 
   Serial.print("SD Card Type: ");
-  if(cardType == CARD_MMC){
+  
+  if(cardType == CARD_MMC)
+  {
     Serial.println("MMC");
-  } else if(cardType == CARD_SD){
+  } 
+  
+  else if(cardType == CARD_SD)
+  {
     Serial.println("SDSC");
-  } else if(cardType == CARD_SDHC){
+  } 
+  
+  else if(cardType == CARD_SDHC)
+  {
     Serial.println("SDHC");
-  } else {
+  } else 
+  
+  {
     Serial.println("UNKNOWN");
   }
 
@@ -200,89 +258,121 @@ void Sd_init(){
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Funciones internas de modulo SD %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels)
+{
   Serial.printf("Listing directory: %s\n", dirname);
 
   File root = fs.open(dirname);
-  if(!root){
+  if(!root)
+  {
     Serial.println("Failed to open directory");
     return;
   }
-  if(!root.isDirectory()){
+  if(!root.isDirectory())
+  {
     Serial.println("Not a directory");
     return;
   
   }
 
   File file = root.openNextFile();
-  while(file){
-    if(file.isDirectory()){
+  while(file)
+  {
+    if(file.isDirectory())
+    {
       Serial.print("  DIR : ");
       Serial.println(file.name());
       if(levels){
         listDir(fs, file.name(), levels -1);
       }
-    } else {
+      
+    } 
+    else 
+    {
       Serial.print("  FILE: ");
       Serial.print(file.name());
       Serial.print("  SIZE: ");
       Serial.println(file.size());
     }
+    
     file = root.openNextFile();
   }
 }
 
-void createDir(fs::FS &fs, const char * path){
+void createDir(fs::FS &fs, const char * path)
+{
   Serial.printf("Creating Dir: %s\n", path);
-  if(fs.mkdir(path)){
+  if(fs.mkdir(path))
+  {
     Serial.println("Dir created");
-  } else {
+  } 
+  
+  else 
+  {
     Serial.println("mkdir failed");
   }
 }
 
-void removeDir(fs::FS &fs, const char * path){
+void removeDir(fs::FS &fs, const char * path)
+{
   Serial.printf("Removing Dir: %s\n", path);
-  if(fs.rmdir(path)){
+  
+  if(fs.rmdir(path))
+  {
     Serial.println("Dir removed");
-  } else {
+  } 
+  
+  else
+  {
     Serial.println("rmdir failed");
   }
 }
 
-void readFile(fs::FS &fs, const char * path){
+void readFile(fs::FS &fs, const char * path)
+{
   Serial.printf("Reading file: %s\n", path);
 
   File file = fs.open(path);
-  if(!file){
+  if(!file)
+  {
     Serial.println("Failed to open file for reading");
     return;
   }
 
   Serial.print("Read from file: ");
-  while(file.available()){
+  while(file.available())
+  {
     Serial.write(file.read());
   }
   file.close();
 }
 
-void writeFile(fs::FS &fs, const char * path, const char * message){
+void writeFile(fs::FS &fs, const char * path, const char * message)
+{
   Serial.printf("Writing file: %s\n", path);
 
   File file = fs.open(path, FILE_WRITE);
-  if(!file){
+  
+  if(!file)
+  {
     Serial.println("Failed to open file for writing");
     return;
   }
-  if(file.print(message)){
+  
+  if(file.print(message))
+  {
     Serial.println("File written");
-  } else {
+  } 
+  
+  else 
+  {
     Serial.println("Write failed");
   }
   file.close();
 }
 
-void appendFile(fs::FS &fs, const char * path, const char * message){
+void appendFile(fs::FS &fs, const char * path, const char * message)
+{
   Serial.printf("Appending to file: %s\n", path);
 
   File file = fs.open(path, FILE_APPEND);
@@ -300,33 +390,46 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
 
 void renameFile(fs::FS &fs, const char * path1, const char * path2){
   Serial.printf("Renaming file %s to %s\n", path1, path2);
-  if (fs.rename(path1, path2)) {
+  
+  if (fs.rename(path1, path2)) 
+  {
     Serial.println("File renamed");
-  } else {
+  }
+  
+  else
+  {
     Serial.println("Rename failed");
   }
 }
 
-void deleteFile(fs::FS &fs, const char * path){
+void deleteFile(fs::FS &fs, const char * path)
+{
   Serial.printf("Deleting file: %s\n", path);
-  if(fs.remove(path)){
+  if(fs.remove(path))
+  {
     Serial.println("File deleted");
-  } else {
+  } 
+  
+  else 
+  {
     Serial.println("Delete failed");
   }
 }
 
-void testFileIO(fs::FS &fs, const char * path){
+void testFileIO(fs::FS &fs, const char * path)
+{
   File file = fs.open(path);
   static uint8_t buf[512];
   size_t len = 0;
   uint32_t start = millis();
   uint32_t end = start;
-  if(file){
+  if(file)
+  {
     len = file.size();
     size_t flen = len;
     start = millis();
-    while(len){
+    while(len)
+    {
       size_t toRead = len;
       if(toRead > 512){
         toRead = 512;
@@ -337,20 +440,24 @@ void testFileIO(fs::FS &fs, const char * path){
     end = millis() - start;
     Serial.printf("%u bytes read for %u ms\n", flen, end);
     file.close();
-  } else {
+  } 
+  else 
+  {
     Serial.println("Failed to open file for reading");
   }
 
 
   file = fs.open(path, FILE_WRITE);
-  if(!file){
+  if(!file)
+  {
     Serial.println("Failed to open file for writing");
     return;
   }
 
   size_t i;
   start = millis();
-  for(i=0; i<2048; i++){
+  for(i=0; i<2048; i++)
+  {
     file.write(buf, 512);
   }
   end = millis() - start;
@@ -368,7 +475,8 @@ void testFileIO(fs::FS &fs, const char * path){
  *  Se puede mejorar dandole dos argumentos de entrada, los cuales serían
  *  EMA_ALFA y así se tendría un filtrado con diferente magnitud para cada variable
  */
-float Filtro_pb(float valor){
+float Filtro_pb(float valor)
+{
   EMA_LP = EMA_ALFA * valor + (1 - EMA_ALFA) * EMA_LP;   // Medida es el valor a filtrar
   return EMA_LP;                                          // EMA_LP es el valor filtrado
 
